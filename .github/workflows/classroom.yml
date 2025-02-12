@@ -1,80 +1,28 @@
-name: Assignment Autograder
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
 jobs:
-  autograder:
+  run-autograding-tests:
     runs-on: ubuntu-latest
-
+    if: github.actor != 'github-classroom[bot]'
     steps:
-      - name: Checkout Student Repository
-        uses: actions/checkout@v3
-
-      - name: Set Up Python Environment
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip
-          pip3 install pandas
-
-      - name: Validate Repository Structure
-        run: |
-          REQUIRED_FILES="_output/os.txt _output/cpu.txt _output/mem.txt _output/pip3.txt _output/jupyter.txt _output/count_python.sh _output/count_github.py"
-          MISSING_FILES=""
-          for FILE in $REQUIRED_FILES; do
-            if [ ! -f "$FILE" ]; then
-              MISSING_FILES="$MISSING_FILES $FILE"
-            fi
-          done
-          if [ -n "$MISSING_FILES" ]; then
-            echo "❌ Missing required files: $MISSING_FILES"
-            exit 1
-          else
-            echo "✅ All required files are present."
-          fi
-
-      - name: Check File Contents
-        run: |
-          echo "Checking os.txt..."
-          if grep -q "Ubuntu" _output/os.txt; then echo "✅ OS check passed"; else echo "❌ OS check failed"; exit 1; fi
-
-          echo "Checking cpu.txt..."
-          if grep -q "CPU" _output/cpu.txt; then echo "✅ CPU check passed"; else echo "❌ CPU check failed"; exit 1; fi
-
-          echo "Checking mem.txt..."
-          if grep -q "MemTotal" _output/mem.txt; then echo "✅ Memory check passed"; else echo "❌ Memory check failed"; exit 1; fi
-
-          echo "Checking pip3.txt..."
-          if grep -q "pip" _output/pip3.txt; then echo "✅ pip3 check passed"; else echo "❌ pip3 check failed"; exit 1; fi
-
-          echo "Checking jupyter.txt..."
-          if grep -q "jupyter" _output/jupyter.txt; then echo "✅ Jupyter check passed"; else echo "❌ Jupyter check failed"; exit 1; fi
-
-      - name: Check `count_python.sh`
-        run: |
-          chmod +x _output/count_python.sh
-          if grep -q "#!/bin/bash" _output/count_python.sh; then
-            echo "✅ Shebang line is present."
-          else
-            echo "❌ Missing shebang in count_python.sh"
-            exit 1
-          fi
-          ./_output/count_python.sh || { echo "❌ count_python.sh execution failed"; exit 1; }
-
-      - name: Check `count_github.py`
-        run: |
-          python3 _output/count_github.py || { echo "❌ count_github.py execution failed"; exit 1; }
-          echo "✅ count_github.py executed successfully."
-
-      - name: Check Commit History
-        run: |
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          if [ "$COMMIT_COUNT" -ge 5 ]; then
-            echo "✅ Commit count check passed."
-          else
-            echo "❌ Insufficient commits. At least 5 commits are required."
-            exit 1
-          fi
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: assignment01_test
+      id: assignment01_test
+      uses: classroom-resources/autograding-python-grader@v1
+      with:
+        timeout: 10
+        max-score: 45
+        setup-command: pip install pytest
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        ASSIGNMENT01_TEST_RESULTS: "${{steps.assignment01_test.outputs.result}}"
+      with:
+        runners: assignment01_test
