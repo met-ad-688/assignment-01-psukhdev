@@ -172,3 +172,5 @@ cython_debug/
 
 question_tags.csv
 questions.csv
+
+stackoverflow.zipstackoverflow.zip
